@@ -9,6 +9,7 @@ from simulator.config.containers import CONTAINER_CONFIG
 from simulator.models.telemetry import TelemetryEvent
 from simulator.scenarios.climate import ClimateScenario
 from simulator.scenarios.state import ScenarioState
+from streaming.producers.telemetry_producer import TelemetryProducer
 
 
 def create_telemetry_event(
@@ -73,8 +74,8 @@ def main() -> None:
     """Continuously generate simulated telemetry."""
 
     containers = build_containers()
-
     interval_seconds = 3
+    producer = TelemetryProducer()
 
     print("AtmoSync IoT Simulator started.")
     print("Press Ctrl+C to stop.\n")
@@ -93,8 +94,11 @@ def main() -> None:
                     destination=container["destination"],
                     scenario=scenario,
                 )
-                
+
                 container["state"].next_state()
+
+                producer.send(event)
+        
 
                 print(
                     f"{event.container_id} | "
@@ -106,6 +110,9 @@ def main() -> None:
 
     except KeyboardInterrupt:
         print("\nAtmoSync IoT Simulator stopped.")
+
+    finally:
+        producer.close()
 
 
 if __name__ == "__main__":
