@@ -14,7 +14,8 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from simulator.models.telemetry import TelemetryEvent
+from simulator.models.telemetry import SCHEMA_VERSION, TelemetryEvent
+
 
 KAFKA_BOOTSTRAP_SERVERS = "localhost:9092"
 KAFKA_TOPIC = "atmosync-telemetry"
@@ -52,8 +53,15 @@ class TelemetryProducer:
 
 
 if __name__ == "__main__":
+    timestamp = TelemetryEvent.current_timestamp()
+
     test_event = TelemetryEvent(
-        timestamp=TelemetryEvent.current_timestamp(),
+        event_id=TelemetryEvent.generate_event_id(
+            container_id="C001",
+            timestamp=timestamp,
+        ),
+        schema_version=SCHEMA_VERSION,
+        timestamp=timestamp,
         container_id="C001",
         commodity="avocado",
         quantity_kg=5000,

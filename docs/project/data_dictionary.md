@@ -8,19 +8,17 @@ The telemetry represents environmental and transportation conditions inside comm
 
 The same data contract will be used across the AtmoSync pipeline:
 
-```text
-Python IoT Simulator
-        ↓
-      Kafka
-        ↓
-    Snowflake
-        ↓
-      dbt
-        ↓
-Analytics & Business Logic
-        ↓
-    Superset
-```
+    Python IoT Simulator
+            ↓
+          Kafka
+            ↓
+        Snowflake
+            ↓
+          dbt
+            ↓
+    Analytics & Business Logic
+            ↓
+        Superset
 
 ---
 
@@ -28,39 +26,63 @@ Analytics & Business Logic
 
 Each telemetry event represents one sensor reading from one container at a specific point in time.
 
-| Field           | Data Type | Unit | Description                                 |
-| --------------- | --------- | ---- | ------------------------------------------- |
-| `timestamp`     | datetime  | UTC  | Time when the sensor reading was generated  |
-| `container_id`  | string    | —    | Unique identifier of the shipping container |
-| `commodity`     | string    | —    | Commodity being transported                 |
-| `quantity_kg`   | float     | kg   | Quantity of commodity inside the container  |
-| `origin`        | string    | —    | Shipment origin                             |
-| `destination`   | string    | —    | Current planned destination                 |
-| `temperature_c` | float     | °C   | Internal container temperature              |
-| `humidity_pct`  | float     | %    | Internal relative humidity                  |
-| `vibration_g`   | float     | g    | Container vibration level                   |
+| Field | Data Type | Unit | Description |
+|---|---|---|---|
+| `event_id` | string | — | Unique identifier for the telemetry event |
+| `schema_version` | string | — | Version of the telemetry data contract |
+| `timestamp` | datetime | UTC | Time when the sensor reading was generated |
+| `container_id` | string | — | Unique identifier of the shipping container |
+| `commodity` | string | — | Commodity being transported |
+| `quantity_kg` | float | kg | Quantity of commodity inside the container |
+| `origin` | string | — | Shipment origin |
+| `destination` | string | — | Current planned destination |
+| `temperature_c` | float | °C | Internal container temperature |
+| `humidity_pct` | float | % | Internal relative humidity |
+| `vibration_g` | float | g | Container vibration level |
 
 ---
 
 ## 3. Example Telemetry Event
 
-```json
-{
-    "timestamp": "2026-09-21T19:30:05Z",
-    "container_id": "C001",
-    "commodity": "avocado",
-    "quantity_kg": 5000,
-    "origin": "Kenya",
-    "destination": "Mumbai",
-    "temperature_c": 6.4,
-    "humidity_pct": 78.2,
-    "vibration_g": 0.12
-}
-```
+    {
+        "event_id": "C001-20260922T141933628005+0000",
+        "schema_version": "1.0",
+        "timestamp": "2026-09-22T14:19:33.628005+00:00",
+        "container_id": "C001",
+        "commodity": "avocado",
+        "quantity_kg": 5000,
+        "origin": "Kenya",
+        "destination": "Mumbai",
+        "temperature_c": 6.11,
+        "humidity_pct": 72.1,
+        "vibration_g": 0.077
+    }
 
 ---
 
 ## 4. Field Definitions
+
+### event_id
+
+A unique identifier assigned to each telemetry event.
+
+The event ID is generated using the container ID and the timestamp of the telemetry event.
+
+Example:
+
+    C001-20260922T141933628005+0000
+
+This identifier allows individual telemetry events to be distinguished and supports downstream data-quality and duplicate-handling processes.
+
+### schema_version
+
+Identifies the version of the telemetry data contract used to generate the event.
+
+Current version:
+
+    1.0
+
+Schema versioning allows the telemetry contract to evolve while keeping changes traceable across downstream systems.
 
 ### timestamp
 
@@ -68,9 +90,7 @@ The UTC timestamp at which the simulated sensor reading is generated.
 
 Example:
 
-```text
-2026-09-21T19:30:05Z
-```
+    2026-09-22T14:19:33.628005+00:00
 
 Using UTC provides a consistent time reference across the entire pipeline.
 
@@ -80,11 +100,9 @@ A unique identifier assigned to each simulated shipping container.
 
 Examples:
 
-```text
-C001
-C002
-C003
-```
+    C001
+    C002
+    C003
 
 ### commodity
 
@@ -92,11 +110,9 @@ The agricultural commodity being transported.
 
 Initial commodities may include:
 
-```text
-Avocado
-Banana
-Mango
-```
+    Avocado
+    Banana
+    Mango
 
 ### quantity_kg
 
@@ -134,35 +150,33 @@ The IoT simulator should generate **raw sensor observations only**.
 
 ### Raw telemetry
 
-```text
-timestamp
-container_id
-commodity
-quantity_kg
-origin
-destination
-temperature_c
-humidity_pct
-vibration_g
-```
+    event_id
+    schema_version
+    timestamp
+    container_id
+    commodity
+    quantity_kg
+    origin
+    destination
+    temperature_c
+    humidity_pct
+    vibration_g
 
 ### Derived analytical fields
 
 These will be calculated later by the analytics/dbt layer rather than by the simulator:
 
-```text
-temperature_deviation
-humidity_deviation
-exposure_duration
-temperature_risk
-humidity_risk
-climate_risk_score
-estimated_spoilage_pct
-estimated_loss
-expected_market_value
-arbitrage_opportunity
-rerouting_recommendation
-```
+    temperature_deviation
+    humidity_deviation
+    exposure_duration
+    temperature_risk
+    humidity_risk
+    climate_risk_score
+    estimated_spoilage_pct
+    estimated_loss
+    expected_market_value
+    arbitrage_opportunity
+    rerouting_recommendation
 
 Keeping raw observations separate from business calculations allows the telemetry pipeline to remain reusable and makes the analytical logic easier to modify and test.
 
@@ -172,6 +186,8 @@ Keeping raw observations separate from business calculations allows the telemetr
 
 The following rules will be applied to telemetry data:
 
+* `event_id` must not be null.
+* `schema_version` must be present and supported.
 * `timestamp` must be a valid UTC datetime.
 * `container_id` must not be null.
 * `commodity` must be a supported commodity.
@@ -192,10 +208,10 @@ Each commodity will have an environmental profile that defines its expected oper
 An initial configuration may use:
 
 | Commodity | Temperature Range | Humidity Range |
-| --------- | ----------------: | -------------: |
-| Avocado   |             4–7°C |         65–80% |
-| Banana    |           13–15°C |         85–95% |
-| Mango     |           10–13°C |         85–90% |
+|---|---:|---:|
+| Avocado | 4–7°C | 65–80% |
+| Banana | 13–15°C | 85–95% |
+| Mango | 10–13°C | 85–90% |
 
 These ranges are configuration values for the simulation and analytics model. They can be refined later using appropriate domain sources.
 
@@ -203,15 +219,15 @@ These ranges are configuration values for the simulation and analytics model. Th
 
 ## 8. Data Pipeline Responsibility
 
-| Component        | Responsibility                           |
-| ---------------- | ---------------------------------------- |
-| Python Simulator | Generate raw telemetry                   |
-| Kafka            | Stream telemetry events                  |
-| Snowflake        | Store raw and analytical data            |
-| dbt              | Transform and model data                 |
+| Component | Responsibility |
+|---|---|
+| Python Simulator | Generate raw telemetry |
+| Kafka | Stream telemetry events |
+| Snowflake | Store raw and analytical data |
+| dbt | Transform and model data |
 | Analytics Engine | Calculate spoilage and arbitrage metrics |
-| Superset         | Visualize business insights              |
-| Alerts           | Notify users of significant conditions   |
+| Superset | Visualize business insights |
+| Alerts | Notify users of significant conditions |
 
 ---
 
@@ -220,3 +236,5 @@ These ranges are configuration values for the simulation and analytics model. Th
 **Version:** 1.0
 
 This data contract may evolve as the AtmoSync architecture develops. Any changes that affect downstream components should be documented and communicated to the team before implementation.
+
+Changes to the telemetry schema should update the `schema_version` field and be reviewed before downstream implementation.

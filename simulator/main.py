@@ -1,5 +1,8 @@
 """
 Main entry point for the AtmoSync IoT simulator.
+
+This module generates simulated telemetry for configured
+shipping containers and publishes the events to Kafka.
 """
 
 import time
@@ -9,7 +12,7 @@ from simulator.config.containers import CONTAINER_CONFIG
 from simulator.models.telemetry import TelemetryEvent
 from simulator.scenarios.climate import ClimateScenario
 from simulator.scenarios.state import ScenarioState
-from streaming.producers.telemetry_producer import TelemetryProducer
+from simulator.models.telemetry import SCHEMA_VERSION, TelemetryEvent
 
 
 def create_telemetry_event(
@@ -18,13 +21,18 @@ def create_telemetry_event(
     quantity_kg: float,
     origin: str,
     destination: str,
-    scenario: str = "normal",
+    scenario: str,
 ) -> TelemetryEvent:
-    """Create a complete telemetry event for a container."""
+    """Create one telemetry event for a container."""
 
     profile = get_commodity_profile(commodity)
 
-    climate = ClimateScenario(**profile)
+    climate = ClimateScenario(
+        temperature_min_c=profile["temperature_min_c"],
+        temperature_max_c=profile["temperature_max_c"],
+        humidity_min_pct=profile["humidity_min_pct"],
+        humidity_max_pct=profile["humidity_max_pct"],
+    )
 
     if scenario == "normal":
         reading = climate.generate_normal_reading()
@@ -33,12 +41,19 @@ def create_telemetry_event(
     elif scenario == "critical":
         reading = climate.generate_critical_reading()
     else:
-        raise ValueError(
-            "Invalid scenario. Choose: normal, warning, or critical."
-        )
+        raise ValueError(f"Unsupported scenario: {scenario}")
+
+    timestamp = TelemetryEvent.current_timestamp()
+
+    event_id = TelemetryEvent.generate_event_id(
+        container_id=container_id,
+        timestamp=timestamp,
+    )
 
     return TelemetryEvent(
-        timestamp=TelemetryEvent.current_timestamp(),
+        event_id=event_id,
+        schema_version=SCHEMA_VERSION,
+        timestamp=timestamp,
         container_id=container_id,
         commodity=commodity,
         quantity_kg=quantity_kg,
@@ -51,30 +66,30 @@ def create_telemetry_event(
 
 
 def build_containers() -> list[dict]:
-    """Build runtime container objects from the configuration."""
+    """Build runtime state for all configured containers."""
 
     containers = []
 
     for config in CONTAINER_CONFIG:
-        container = {
-            "container_id": config["container_id"],
-            "commodity": config["commodity"],
-            "quantity_kg": config["quantity_kg"],
-            "origin": config["origin"],
-            "destination": config["destination"],
-            "state": ScenarioState(config["initial_state"]),
-        }
-
-        containers.append(container)
+        containers.append(
+            {
+                **config,
+                "state": ScenarioState(
+                    initial_state=config["initial_state"]
+                ),
+            }
+        )
 
     return containers
 
 
 def main() -> None:
-    """Continuously generate simulated telemetry."""
+    """Continuously generate and publish simulated telemetry."""
 
     containers = build_containers()
+
     interval_seconds = 3
+
     producer = TelemetryProducer()
 
     print("AtmoSync IoT Simulator started.")
@@ -83,7 +98,6 @@ def main() -> None:
     try:
         while True:
             for container in containers:
-
                 scenario = container["state"].get_current_state()
 
                 event = create_telemetry_event(
@@ -98,7 +112,6 @@ def main() -> None:
                 container["state"].next_state()
 
                 producer.send(event)
-        
 
                 print(
                     f"{event.container_id} | "

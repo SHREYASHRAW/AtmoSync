@@ -47,6 +47,8 @@ def main() -> None:
                 )
 
                 required_fields = [
+                    "event_id",
+                    "schema_version",
                     "timestamp",
                     "container_id",
                     "commodity",
@@ -74,6 +76,8 @@ def main() -> None:
 
                 print(
                     f"Received telemetry | "
+                    f"event={telemetry['event_id']} | "
+                    f"schema={telemetry['schema_version']} | "
                     f"container={telemetry['container_id']} | "
                     f"commodity={telemetry['commodity']} | "
                     f"temperature={telemetry['temperature_c']}°C | "
