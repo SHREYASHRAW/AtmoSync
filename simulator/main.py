@@ -13,6 +13,7 @@ from simulator.models.telemetry import TelemetryEvent
 from simulator.scenarios.climate import ClimateScenario
 from simulator.scenarios.state import ScenarioState
 from simulator.models.telemetry import SCHEMA_VERSION, TelemetryEvent
+from streaming.producers.telemetry_producer import TelemetryProducer
 
 
 def create_telemetry_event(
