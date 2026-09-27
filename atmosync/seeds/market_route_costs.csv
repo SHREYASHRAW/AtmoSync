@@ -1,0 +1,10 @@
+origin,destination,route_cost
+Kenya,Mumbai,25000
+Kenya,Delhi,35000
+Kenya,Pune,30000
+Ecuador,Mumbai,30000
+Ecuador,Delhi,25000
+Ecuador,Pune,35000
+India,Mumbai,18000
+India,Delhi,22000
+India,Pune,15000
