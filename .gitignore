@@ -1,0 +1,45 @@
+﻿# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+
+# Jupyter
+.ipynb_checkpoints/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Local data
+data/raw/*
+data/processed/*
+
+# Snowflake credentials
+*.pem
+*.key
+
+# dbt
+target/
+dbt_packages/
+logs/
+
+# Temporary files
+*.tmp
+*.temp

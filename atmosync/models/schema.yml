@@ -1,0 +1,148 @@
+version: 2
+
+models:
+
+  - name: stg_telemetry
+    description: "Cleaned staging layer for raw telemetry events."
+    columns:
+      - name: event_id
+        description: "Unique telemetry event identifier."
+        tests:
+          - not_null
+          - unique
+
+      - name: timestamp
+        description: "UTC timestamp of the telemetry reading."
+        tests:
+          - not_null
+
+      - name: container_id
+        description: "Identifier of the shipping container."
+        tests:
+          - not_null
+
+      - name: commodity
+        description: "Commodity being transported."
+        tests:
+          - not_null
+
+  - name: stg_climate_risk
+    description: "Classifies telemetry readings into climate risk levels."
+    columns:
+      - name: event_id
+        tests:
+          - not_null
+
+      - name: climate_risk_level
+        description: "Climate risk classification for the telemetry reading."
+        tests:
+          - accepted_values:
+              arguments:
+                values:
+                  - NORMAL
+                  - WARNING
+                  - CRITICAL
+
+  - name: stg_exposure
+    description: "Calculates the time interval between telemetry readings."
+    columns:
+      - name: event_id
+        tests:
+          - not_null
+
+      - name: container_id
+        tests:
+          - not_null
+
+      - name: exposure_interval_minutes
+        description: "Minutes represented by each telemetry interval."
+
+  - name: container_climate_summary
+    description: "Container-level summary of climate conditions and exposure."
+    columns:
+      - name: container_id
+        tests:
+          - not_null
+          - unique
+
+      - name: commodity
+        tests:
+          - not_null
+
+  - name: fct_spoilage
+    description: "Simulation-based estimation of commodity spoilage."
+    columns:
+      - name: container_id
+        tests:
+          - not_null
+          - unique
+
+      - name: estimated_spoilage_pct
+        description: "Estimated spoilage percentage based on simulated climate exposure."
+
+      - name: estimated_spoiled_quantity_kg
+        description: "Estimated quantity affected by spoilage."
+
+      - name: estimated_usable_quantity_kg
+        description: "Estimated quantity remaining usable."
+
+  - name: fct_financial_impact
+    description: "Estimated financial impact of simulated spoilage."
+    columns:
+      - name: container_id
+        tests:
+          - not_null
+          - unique
+
+      - name: estimated_spoilage_pct
+        tests:
+          - not_null
+
+      - name: estimated_spoilage_loss
+        description: "Estimated monetary loss caused by simulated spoilage."
+
+  - name: fct_arbitrage
+    description: "Compares alternative markets and calculates simulated arbitrage opportunities."
+    columns:
+      - name: container_id
+        tests:
+          - not_null
+
+      - name: alternative_market
+        tests:
+          - not_null
+
+      - name: net_opportunity
+        description: "Difference between alternative net value and current usable value."
+
+      - name: arbitrage_status
+        tests:
+          - accepted_values:
+              arguments:
+                values:
+                  - REROUTE_CANDIDATE
+                  - KEEP_CURRENT_ROUTE
+
+  - name: fct_rerouting
+    description: "Selects the highest-net-value alternative and produces a routing decision."
+    columns:
+      - name: container_id
+        tests:
+          - not_null
+          - unique
+
+      - name: recommended_destination
+        tests:
+          - not_null
+
+      - name: routing_decision
+        tests:
+          - accepted_values:
+              arguments:
+                values:
+                  - REROUTE
+                  - KEEP_CURRENT_ROUTE
+
+      - name: net_opportunity
+        tests:
+          - not_null
